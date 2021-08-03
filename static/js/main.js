@@ -10,9 +10,20 @@ var webSocket;
 
 function webSocketOnMessage(event) {
     var parsedData = JSON.parse(event.data);
-    var message = parsedData["message"];
+    var peerUsername = parsedData["peer"];
+    var action = parsedData["action"];
 
-    console.log("message: " + message);
+    if (username == peerUsername) {
+        return;
+    }
+
+    var receiver_channel_name = parsedData["message"]["receiver_channel_name"];
+
+    if (action == "new-peer") {
+        createOfferer(peerUsername, receiver_channel_name);
+
+        return;
+    }
 }
 
 btnJoin.addEventListener('click', () => {
@@ -27,7 +38,7 @@ btnJoin.addEventListener('click', () => {
     usernameInput.value = "";
     usernameInput.disabled = true;
     usernameInput.style.visibility = "hidden";
-    
+
     btnJoin.disabled = true;
     btnJoin.style.visibility = "hidden";
 
@@ -49,6 +60,8 @@ btnJoin.addEventListener('click', () => {
 
     webSocket.addEventListener("open", (e) => {
         console.log("Connection Open!");
+
+        sendSignal("new-peer", {});
     });
     webSocket.addEventListener("close", (e) => {
         console.log("Connection Closed!");
@@ -56,4 +69,62 @@ btnJoin.addEventListener('click', () => {
     webSocket.addEventListener("error", (e) => {
         console.log("Error!");
     });
-})
+});
+
+var localStream = new MediaStream();
+
+const constraint = {
+    'video': true,
+    'audio': true
+}
+
+const localVideo = document.querySelector("#local-video");
+
+var userMedia = navigator.mediaDevices.getUserMedia(constraint)
+    .then(stream => {
+        localStream = stream;
+        localVideo.srcObject = localStream;
+        localVideo.muted = true;
+    })
+    .catch(error => {
+        console.log("Error accessing media : " + error);
+    });
+
+function sendSignal(action, message) {
+    var jsonStr = JSON.stringify({
+        "peer": username,
+        "action": action,
+        "message": message
+    });
+
+    webSocket.send(jsonStr);
+}
+
+function createOfferer(peerUsername, receiver_channel_name) {
+    var peer = new RTCPeerConnection(null);
+
+    addLocalTracks(peer);
+
+    var dc = peer.createDataChannel("channel");
+    dc.addEventListener("open", () => {
+        console.log("Connection opened!");
+    });
+    dc.addEventListener("message", dcOnMessage);
+}
+
+function addLocalTracks(peer) {
+    localStream.getTracks().forEach(track => {
+        peer.addTrack(track, localStream);
+    });
+
+    return;
+}
+
+var messageList = document.querySelector("#message-list");
+function dcOnMessage(event) {
+    var message = event.data;
+
+    var li = document.createElement("li");
+    li.appendChild(document.createTextNode(message));
+    messageList.appendChild(li);
+}
