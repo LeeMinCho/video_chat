@@ -1,5 +1,7 @@
 console.log('main js');
 
+var mapPeers = {};
+
 var labelUsername = document.querySelector('#label-username');
 var usernameInput = document.querySelector('#username');
 var btnJoin = document.querySelector('#btn-join');
@@ -110,6 +112,44 @@ function createOfferer(peerUsername, receiver_channel_name) {
         console.log("Connection opened!");
     });
     dc.addEventListener("message", dcOnMessage);
+
+    var remoteVideo = createVideo(peerUsername);
+    setOnTrack(peer, remoteVideo);
+
+    mapPeers[peerUsername] = [peer, dc];
+
+    peer.addEventListener('iceconnectionstatechange', () => {
+        var iceConnectionState = peer.iceConnectionState;
+
+        if (iceConnectionState === 'failed' || iceConnectionState === 'disconnected' || iceConnectionState === 'closed') {
+            delete mapPeers[peerUsername];
+
+            if (iceConnectionState != 'closed') {
+                peer.close();
+            }
+
+            removeVideo(remoteVideo);
+        }
+    });
+
+    peer.addEventListener('icecandidate', (event) => {
+        if (event.candidate) {
+            console.log('New ice candidate: ' + JSON.stringify(peer.localDescription));
+
+            return;
+        }
+
+        sendSignal('new-offer', {
+            'sdp': peer.localDescription,
+            'receiver_channel_name': receiver_channel_name
+        })
+    });
+
+    peer.createOffer()
+        .then(o => peer.setLocalDescription(o))
+        .then(() => {
+            console.log('Local Description set successfully');
+        });
 }
 
 function addLocalTracks(peer) {
@@ -127,4 +167,34 @@ function dcOnMessage(event) {
     var li = document.createElement("li");
     li.appendChild(document.createTextNode(message));
     messageList.appendChild(li);
+}
+
+function createVideo(peerUsername) {
+    var videoContainer = document.querySelector('#video-container');
+
+    var remoteVideo = document.createElement("video");
+
+    remoteVideo.id = peerUsername + "-video";
+    remoteVideo.autoplay = true;
+    remoteVideo.playsInline = true;
+
+    var videoWrapper = document.createElement("div");
+    videoContainer.appendChild(videoWrapper);
+    videoWrapper.appendChild(remoteVideo);
+    
+    return remoteVideo;
+}
+
+function setOnTrack(peer, remoteVideo) {
+    var remoteStream = new MediaStream();
+    remoteVideo.srcObject = remoteStream;
+    peer.addEventListener('track', async (event) => {
+        remoteStream.addTrack(event.track, remoteStream);
+    });
+}
+
+function removeVideo(video) {
+    var videoWrapper = video.parentNode;
+
+    videoWrapper.parentNode.removeChild(videoWrapper);
 }
