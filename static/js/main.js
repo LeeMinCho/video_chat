@@ -155,6 +155,10 @@ function sendMsgOnClick() {
     messageList.appendChild(li);
 
     var dataChannels = getDataChannels();
+
+    for (index in dataChannels) {
+        dataChannels[index].send(message);
+    }
 }
 
 function sendSignal(action, message) {
@@ -325,8 +329,10 @@ function removeVideo(video) {
 function getDataChannels() {
     var dataChannels = [];
 
-    for (let peers = 0; peers < array.length; peers++) {
-        const element = array[peers];
-
+    for (peerUsername in mapPeers) {
+        var dataChannel = mapPeers[peerUsername][1];
+        dataChannels.push(dataChannel);
     }
+
+    return dataChannels;
 }
