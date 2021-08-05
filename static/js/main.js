@@ -83,6 +83,7 @@ btnJoin.addEventListener('click', () => {
 
         sendSignal("new-peer", {});
     });
+    webSocket.addEventListener("message", webSocketOnMessage);
     webSocket.addEventListener("close", (e) => {
         console.log("Connection Closed!");
     });
@@ -93,7 +94,7 @@ btnJoin.addEventListener('click', () => {
 
 var localStream = new MediaStream();
 
-const constraint = {
+const constraints = {
     'video': true,
     'audio': true
 }
@@ -103,7 +104,7 @@ const localVideo = document.querySelector("#local-video");
 const btnToggleAudio = document.querySelector("#btn-toggle-audio");
 const btnToggleVideo = document.querySelector("#btn-toggle-video");
 
-var userMedia = navigator.mediaDevices.getUserMedia(constraint)
+var userMedia = navigator.mediaDevices.getUserMedia(constraints)
     .then(stream => {
         localStream = stream;
         localVideo.srcObject = localStream;
@@ -156,9 +157,13 @@ function sendMsgOnClick() {
 
     var dataChannels = getDataChannels();
 
+    message = username + ': ' + message;
+
     for (index in dataChannels) {
         dataChannels[index].send(message);
     }
+
+    messageInput.value = '';
 }
 
 function sendSignal(action, message) {
