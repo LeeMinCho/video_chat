@@ -2,7 +2,6 @@ console.log('main js');
 
 var mapPeers = {};
 
-var labelUsername = document.querySelector('#label-username');
 var usernameInput = document.querySelector('#username');
 var btnJoin = document.querySelector('#btn-join');
 
@@ -146,13 +145,13 @@ var btnSendMsg = document.querySelector("#btn-send-msg");
 var messageList = document.querySelector("#message-list");
 var messageInput = document.querySelector("#msg");
 
-btnSendMsg.addEventListener("click", sendMsgOnClick());
+btnSendMsg.addEventListener("click", sendMsgOnClick);
 
 function sendMsgOnClick() {
     var message = messageInput.value;
 
     var li = document.createElement("li");
-    li.appendChild(document.createTextNode("Me" + message));
+    li.appendChild(document.createTextNode("Me :" + message));
     messageList.appendChild(li);
 
     var dataChannels = getDataChannels();
@@ -216,7 +215,7 @@ function createOfferer(peerUsername, receiver_channel_name) {
         sendSignal('new-offer', {
             'sdp': peer.localDescription,
             'receiver_channel_name': receiver_channel_name
-        })
+        });
     });
 
     peer.createOffer()
@@ -270,12 +269,14 @@ function createAnswerer(offer, peerUsername, receiver_channel_name) {
         sendSignal('new-answer', {
             'sdp': peer.localDescription,
             'receiver_channel_name': receiver_channel_name
-        })
+        });
     });
 
     peer.setRemoteDescription(offer)
         .then(() => {
             console.log("Remote Description set successfully for %s" + peerUsername);
+
+            return peer.createAnswer();
         })
         .then(a => {
             console.log("Answer created");
@@ -292,7 +293,7 @@ function addLocalTracks(peer) {
     return;
 }
 
-var messageList = document.querySelector("#message-list");
+// var messageList = document.querySelector("#message-list");
 function dcOnMessage(event) {
     var message = event.data;
 
